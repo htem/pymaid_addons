@@ -11,24 +11,26 @@ Opens a connection to a CATMAID server, reading the needed URL and account info 
 #### `make_3dViewer_json.py`
 A collection of functions to create json configuration files for the CATMAID 3D viewer widget, by providing a mapping between colors and lists of annotations to search for. The workhorses here are `make_json_by_annotations` for converting annotation lists to skeleton ID lists, and `write_catmaid_json` for writing out a correctly formatted file.
 
-    Example:
+    # Example:
     import pymaid_addons as pa
     > Connecting to catmaid...
-    > Source project: 1 L1 CNS  # This means that the L1larva.json file was linked to catmaid_configs/catmaid_configs.json
-                                # to be the default. The below example only works for that project.
+    > Source project: 1 Adult Brain  # This means that the default connection file located at
+                                     # connection_configs/catmaid_configs.json points is linked to point to
+                                     # connection_configs/catmaid_configs_virtualflybrain_FAFB.json.
+                                     # The below example only works for that project.
+    pa.make_json_by_annotations({'cyan': 'Paper: Kim et al 2020', 'magenta': 'FBbt:00110882'}, 'FAFB_example')
+    > ['Paper: Kim et al 2020']
+    > Found 95 neurons
+    > ['FBbt:00110882']
+    > Found 11 neurons
+    > CATMAID json written to project1_FAFB_example.json. Use this file at https://fafb.catmaid.virtualflybrain.org/?pid=1
+
+    pa.reset_connection('catmaid_configs_virtualflybrain_L1larva.json')
+    > Connecting to catmaid...
+    > Source project: 1 L1 CNS  # Now connected to the L1 larva catmaid project
     pa.make_rainbow_json_by_position('A1 motorneurons', 'larva_a1_motor_neurons', extract_position='root_x')
     > CATMAID json written to project1_a1_motor_neurons.json. Use this file at https://l1em.catmaid.virtualflybrain.org/?pid=1
 
-    pa.reset_connection('catmaid_configs_virtualflybrain_FAFB.json')
-    > Connecting to catmaid...
-    > Source project: 1 Adult Brain  # Now connected to the FAFB catmaid project
-    pa.make_json_by_annotations({'blue': 'Paper: Zheng et al 2018', 'red': 'Paper: Bates and Schlegel et al 2020'}, 'FAFB_Zheng_BatesSchlegel')
-    > ['Paper: Zheng et al 2018']
-    > Found 145 neurons
-    > ['Paper: Bates and Schlegel et al 2020']
-    > Found 584 neurons
-    > ... some warnings about neurons having both annotations, fine to ignore ...
-    > CATMAID json written to project1_FAFB_Zheng_BatesSchlegel.json. Use this file at https://fafb.catmaid.virtualflybrain.org/?pid=1
 
 
 #### `manipulate_and_reupload_catmaid_neurons.py`
