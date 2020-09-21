@@ -1,0 +1,13 @@
+{
+    "catmaid_account_api_keys": {
+        "no login": ""
+    },
+
+    "source_catmaid_url": "https://catmaid3.hms.harvard.edu/catmaidvnc",
+    "source_catmaid_account_to_use": "no login",
+    "source_project_id": 2,
+
+    "target_catmaid_url": "https://catmaid3.hms.harvard.edu/catmaidvnc",
+    "target_catmaid_account_to_use": "no login",
+    "target_project_id": 59
+}

@@ -1,0 +1,12 @@
+{
+    "note1": "If you're only going to be accessing reconstructions on l1em.catmaid.virtualflybrain.org, nothing in this file needs to be changed.",
+
+    "catmaid_account_api_keys": {
+        "no login": "",
+        "other_account": "If you have credentials for a different account, you can add its API key here and select that account when you want to use it by changing catmaid_account_to_use"
+    },
+    "source_catmaid_url": "https://l1em.catmaid.virtualflybrain.org",
+    "source_catmaid_account_to_use": "no login",
+    "source_project_id": 1
+
+}
