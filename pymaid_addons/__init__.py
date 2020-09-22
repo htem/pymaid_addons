@@ -21,6 +21,8 @@ def reset_connection(config_filename='catmaid_configs.json'):
         connections.target_project = target_project
         manipulate_and_reupload_catmaid_neurons.target_project = target_project
 
+connect_to = reset_connection  # Just an alias
+ 
 
 def __getattr__(name):
     if name == 'source_project':

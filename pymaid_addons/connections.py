@@ -7,17 +7,34 @@ import json
 import pymaid
 
 
-def connect_to_catmaid(config_filename='catmaid_configs.json'):
+def connect_to_catmaid(config_filename='default_connection.json'):
+    connection_nicknames = {
+        'fafb': 'virtualflybrain_FAFB.json',
+        'brain': 'virtualflybrain_FAFB.json',
+        'fanc': 'virtualflybrain_FANC.json',
+        'vnc': 'virtualflybrain_FANC.json',
+        'larva': 'virtualflybrain_L1larva.json',
+        'l1': 'virtualflybrain_L1larva.json'
+    }
+    package_dir = os.path.dirname(__file__)
+    config_dir = os.path.join(package_dir, 'connection_configs')
+
+    nicknames_fn = os.path.join(config_dir, 'custom_nicknames.json')
+    if os.path.exists(nicknames_fn):
+        with open(nicknames_fn, 'r') as f:
+            connection_nicknames.update(json.load(f))
+    if config_filename.lower() in connection_nicknames:
+        config_filename = connection_nicknames[config_filename.lower()]
+
     if not os.path.exists(config_filename):
-        config_filename = os.path.join(os.path.dirname(__file__),
-        'connection_configs', config_filename)
+        config_filename = os.path.join(config_dir, config_filename)
     try:
         with open(config_filename, 'r') as f:
             configs = json.load(f)
     except:
         print(f'ERROR: No {config_filename} file found, or file improperly'
-              ' formatted. See catmaid_configs_virtualflybrain.json for an'
-              ' example config file that works.')
+              ' formatted. See catmaid_configs_virtualflybrain_FAFB.json for'
+              ' an example config file that works.')
         raise
 
     catmaid_http_username = configs.get('catmaid_http_username', None)
