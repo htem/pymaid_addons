@@ -14,7 +14,7 @@ Description: ## pymaid_addons
         This package contains 3 modules:
         
         #### `connections.py`
-        Opens a connection to a CATMAID server, reading the needed URL and account info from a config file stored in the `connection_configs` folder. Example credentials files are provided for connecting to Virtual Fly Brain's CATMAID servers for FAFB, L1 larva, and FANC.
+        Opens a connection to a CATMAID server, reading the needed URL and account info from a config file stored in the `connection_configs` folder. Example credentials files are provided for connecting to Virtual Fly Brain's CATMAID servers for FAFB, FANC, and the L1 larva.
         
         #### `make_3dViewer_json.py`
         A collection of functions to create json configuration files for the CATMAID 3D viewer widget, by providing a mapping between colors and lists of annotations to search for. The workhorses here are `make_json_by_annotations` for converting annotation lists to skeleton ID lists, and `write_catmaid_json` for writing out a correctly formatted file.
@@ -23,9 +23,9 @@ Description: ## pymaid_addons
             import pymaid_addons as pa
             > Connecting to catmaid...
             > Source project: 1 Adult Brain  # This means that the default connection file located at
-                                             # connection_configs/catmaid_configs.json points is linked to point to
-                                             # connection_configs/catmaid_configs_virtualflybrain_FAFB.json.
-                                             # The below example only works for that project.
+                                             # connection_configs/default_connection.json is linked to point to
+                                             # connection_configs/virtualflybrain_FAFB.json. The below example
+                                             # only works when connected to that server.
             pa.make_json_by_annotations({'cyan': 'Paper: Kim et al 2020', 'magenta': 'FBbt:00110882'}, 'FAFB_example')
             > ['Paper: Kim et al 2020']
             > Found 95 neurons
@@ -33,7 +33,7 @@ Description: ## pymaid_addons
             > Found 11 neurons
             > CATMAID json written to project1_FAFB_example.json. Use this file at https://fafb.catmaid.virtualflybrain.org/?pid=1
         
-            pa.reset_connection('catmaid_configs_virtualflybrain_L1larva.json')
+            pa.connect_to('larva')
             > Connecting to catmaid...
             > Source project: 1 L1 CNS  # Now connected to the L1 larva catmaid project
             pa.make_rainbow_json_by_position('A1 motorneurons', 'larva_a1_motor_neurons', extract_position='root_x')
@@ -53,26 +53,21 @@ Description: ## pymaid_addons
         6. `radius_prune_neurons`: Prune a neuron to only the nodes that have a certain radius. Used in the GridTape/VNC paper to prune motor neurons down to their primary neurites.
         
         #### Additionally, `__init__.py`
-        Upon importing this package, `__init__.py` opens a connection to CATMAID using `connetions.connect_to_catmaid()`, which uses the default parameters at `connection_configs/catmaid_configs.json`. Then, `__init__.py` shares access to that connection object with each of the 3 modules above, so that changes in the connection (like changing project ID) will be seen by each of the modules.
+        Upon importing this package, `__init__.py` opens a connection to CATMAID using `connetions.connect_to_catmaid()`, which uses the default parameters at `connection_configs/default_connection.json`. Then, `__init__.py` shares access to that connection object with each of the 3 modules above, so that changes in the connection (like changing project ID) will be seen by each of the modules.
         
         To use `pymaid_addons` to easily open a CATMAID connection for use by `pymaid` functions, you can do something like the following:
         
-            import pymaid  # https://pymaid.readthedocs.io/en/latest/index.html
-            import pymaid_addons as pa
-            pa.set_source_project_id(7)  # You can set the project ID within your scripts via this function instead of changing it in the config files
-            
-            pymaid.whatever_pymaid_function_you_want_to_use(args)
-            
-        OR
-        
             import pymaid
             import pymaid_addons as pa
-            pa.set_source_project_id(7)
-            
+            pymaid.whatever_pymaid_function_you_want_to_use(args)  # https://pymaid.readthedocs.io/en/latest/index.html
+            #OR
             pymaid.whatever_pymaid_function_you_want_to_use(args, remote_instance=pa.source_project)
             # If you have both a source and a target project, then the source project
-            # won't be made global, so you need to explicitly pass either pa.source_project
-            # or pa.target_project project to pymaid functions.
+            # won't be set to be a global connection, so you need to explicitly pass
+            # either pa.source_project or pa.target_project project to pymaid functions.
+        
+            pa.connect_to('larva')  # Now connect to VFB's L1 larva data. Nicknames 'fafb', 'fanc', and 'larva' work.
+            pa.now_call_functions_to_access_larva_reconstructions(args)
         
 Platform: UNKNOWN
 Classifier: Programming Language :: Python :: 3

@@ -2,7 +2,7 @@ from .connections import *
 from .manipulate_and_reupload_catmaid_neurons import *
 from .make_3dViewer_json import *
 
-def reset_connection(config_filename='catmaid_configs.json'):
+def reset_connection(config_filename='default_connection.json'):
     # Open connections
     print('Connecting to catmaid...')
     projects = connect_to_catmaid(config_filename=config_filename)
