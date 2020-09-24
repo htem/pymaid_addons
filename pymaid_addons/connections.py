@@ -7,22 +7,25 @@ import json
 import pymaid
 
 
-def connect_to_catmaid(config_filename='default_connection.json'):
-    connection_nicknames = {
-        'fafb': 'virtualflybrain_FAFB.json',
-        'brain': 'virtualflybrain_FAFB.json',
-        'fanc': 'virtualflybrain_FANC.json',
-        'vnc': 'virtualflybrain_FANC.json',
-        'larva': 'virtualflybrain_L1larva.json',
-        'l1': 'virtualflybrain_L1larva.json'
-    }
-    package_dir = os.path.dirname(__file__)
-    config_dir = os.path.join(package_dir, 'connection_configs')
+connection_nicknames = {
+    'fafb': 'virtualflybrain_FAFB.json',
+    'brain': 'virtualflybrain_FAFB.json',
+    'fanc': 'virtualflybrain_FANC.json',
+    'vnc': 'virtualflybrain_FANC.json',
+    'larva': 'virtualflybrain_L1larva.json',
+    'l1': 'virtualflybrain_L1larva.json'
+}
+package_dir = os.path.dirname(__file__)
+config_dir = os.path.join(package_dir, 'connection_configs')
 
-    nicknames_fn = os.path.join(config_dir, 'custom_nicknames.json')
-    if os.path.exists(nicknames_fn):
-        with open(nicknames_fn, 'r') as f:
-            connection_nicknames.update(json.load(f))
+nicknames_fn = os.path.join(config_dir, 'custom_nicknames.json')
+if os.path.exists(nicknames_fn):
+    with open(nicknames_fn, 'r') as f:
+        connection_nicknames.update(json.load(f))
+del f
+
+
+def connect_to_catmaid(config_filename='default_connection.json'):
     if config_filename.lower() in connection_nicknames:
         config_filename = connection_nicknames[config_filename.lower()]
 
@@ -55,7 +58,14 @@ def connect_to_catmaid(config_filename='default_connection.json'):
             make_global=False
         )
         source_project.project_id = configs['source_project_id']
-        print_project_name(source_project, 'Source project:')
+        try:
+            print_project_name(source_project, 'Source project: ' +
+                               configs['source_catmaid_url'])
+        except:
+            raise Exception(f'The API key provided in {config_filename}'
+                            ' does not appear to have access to project'
+                            f' {source_project.project_id}. Please provide'
+                            ' a different API key or project ID.')
     else:
         raise ValueError('The following fields must appear in'
                          f' {config_filename} and not be null:'
@@ -81,7 +91,8 @@ def connect_to_catmaid(config_filename='default_connection.json'):
             make_global=False
         )
         target_project.project_id = configs['target_project_id']
-        print_project_name(target_project, 'Target project:')
+        print_project_name(target_project, 'Target project: '+
+                           configs['target_catmaid_url'])
 
     elif any([configs.get('target_catmaid_url', None),
               configs.get('target_catmaid_account_to_use', None),

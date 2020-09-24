@@ -1,3 +1,5 @@
 { 
-    "hms_fanc": "hms_FANC.json"
+    "hms_vnc": "hms_catmaidvnc.json",
+    "hms_ppc": "hms_catmaidppc.json",
+    "hms_cb2": "hms_catmaidcb2.json"
 } 

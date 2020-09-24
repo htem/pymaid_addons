@@ -1,0 +1,11 @@
+{
+    "catmaid_account_api_keys": {
+        "no login": "",
+        "yourNameHere": "YouCanAddYourPersonalAPIKeyHere"
+    },
+    "note1": "If you add your API key above, change 'no login' below to match the name you put above",
+
+    "source_catmaid_url": "http://catmaid3.hms.harvard.edu/catmaidcb2",
+    "source_catmaid_account_to_use": "no login",
+    "source_project_id": 2
+}

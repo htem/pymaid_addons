@@ -11,8 +11,8 @@
     "source_project_id": 1,
 
     "note3": "If you'd like to copy neuron reconstructions from virtualflybrain to a catmaid instance to which you have write permissions, set the following variables to point to your catmaid project. Otherwise, leave them as is to be able to access reconstructions in that atlas-space catmaid project",
-    "target_catmaid_url": "https://fanc.catmaid.virtualflybrain.org",
-    "target_catmaid_account_to_use": "no login",
+    "_target_catmaid_url": "https://fanc.catmaid.virtualflybrain.org",
+    "_target_catmaid_account_to_use": "no login",
     "note4": "Project ID 2 contains the reconstructions in the VNC standard atlas (JRC 2018 Female VNC) coordinate system",
-    "target_project_id": 2
+    "_target_project_id": 2
 }
