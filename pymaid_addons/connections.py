@@ -55,7 +55,7 @@ def connect_to_catmaid(config_filename='default_connection.json'):
             ],
             http_user=catmaid_http_username,
             http_password=catmaid_http_password,
-            make_global=False
+            make_global=True
         )
         source_project.project_id = configs['source_project_id']
         try:

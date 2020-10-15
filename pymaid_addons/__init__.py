@@ -11,7 +11,6 @@ def reset_connection(config_filename='default_connection.json'):
         source_project, target_project = projects
     else:
         source_project = projects
-        source_project.make_global()
 
     # Allow each script read/write access to these project objects
     connections.source_project = source_project
