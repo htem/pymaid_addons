@@ -317,7 +317,8 @@ def upload_or_update_neurons(neurons,
             # skip the upload and tell the user.  
 
             # Check whether any edited nodes will be overwritten
-            linked_node_details = pymaid.get_node_details(linked_neuron, remote_instance=target_project)
+            linked_node_details = pymaid.get_node_details(linked_neuron.nodes.treenode_id.values,
+                                                          remote_instance=target_project)
             is_edited = linked_node_details.edition_time != min(linked_node_details.edition_time)
             if is_edited.any():
                 edited_nodes = linked_node_details.loc[is_edited, ['node_id', 'edition_time', 'editor']]
@@ -406,8 +407,11 @@ def upload_or_update_neurons(neurons,
         clear_cache()
         unlinked_connectors_end = find_unlinked_connectors(remote_instance=target_project)
         if len(unlinked_connectors_end) != len(unlinked_connectors_start):
-            print("WARNING: This upload created new unlinked connectors. This may be "
-                  "a bug or an un-addressed corner case. Go investigate these connectors:")
+            print("WARNING: This upload caused some connectors in the "
+                  "target project to become unlinked from any skeleton. "
+                  "(This can result from deleting connectors from "
+                  "the source project, or may indicate a bug in the code.) "
+                  "Go clean up these connectors:")
             print(set(unlinked_connectors_end).difference(set(unlinked_connectors_start)))
             input('(Press enter to acknowledge warning and continue.)')
 
