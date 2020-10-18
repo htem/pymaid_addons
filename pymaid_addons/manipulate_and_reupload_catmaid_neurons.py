@@ -406,13 +406,14 @@ def upload_or_update_neurons(neurons,
         # despite there being nothing to worry about. Not much I can do there.
         clear_cache()
         unlinked_connectors_end = find_unlinked_connectors(remote_instance=target_project)
-        if len(unlinked_connectors_end) != len(unlinked_connectors_start):
+        newly_unlinked_connectors = set(unlinked_connectors_end).difference(set(unlinked_connectors_start))
+        if len(newly_unlinked_connectors) != 0:
             print("WARNING: This upload caused some connectors in the "
                   "target project to become unlinked from any skeleton. "
-                  "(This can result from deleting connectors from "
-                  "the source project, or may indicate a bug in the code.) "
-                  "Go clean up these connectors:")
-            print(set(unlinked_connectors_end).difference(set(unlinked_connectors_start)))
+                  "(This can harmlessly result from deleting connectors from "
+                  "the source project, or it may indicate a bug in the code.) "
+                  "You may want to go clean up the new unlinked connectors:")
+            print(newly_unlinked_connectors)
             input('(Press enter to acknowledge warning and continue.)')
 
     return server_responses
