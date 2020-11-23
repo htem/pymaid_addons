@@ -297,9 +297,6 @@ def upload_or_update_neurons(neurons,
                   f'skeleton ID {linked_neuron.skeleton_id} in target project.'
                   f' Updating its treenodes{m} and annotations to match the'
                   ' source neuron.')
-            if refuse_to_update:
-                print('refuse_to_update set to true. Skipping.\n')
-                continue
 
             # Check whether names match
             if not source_neuron.neuron_name == linked_neuron.neuron_name:
@@ -334,6 +331,10 @@ def upload_or_update_neurons(neurons,
                 if user_input not in ('y', 'Y'):
                     print(f'Skipping update for "{source_neuron.neuron_name}"')
                     continue
+
+            if refuse_to_update:
+                print('refuse_to_update set to true. Skipping.\n')
+                continue
 
             # This does NOT annotate the source neuron on the server,
             # it only appends to the object in memory
