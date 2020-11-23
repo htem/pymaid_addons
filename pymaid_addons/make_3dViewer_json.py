@@ -132,6 +132,9 @@ def make_rainbow_json_by_position(annotations,
         extract_position = lambda n: n.nodes.y.mean()
     elif extract_position  == 'mean_z':
         extract_position = lambda n: n.nodes.z.mean()
+    elif extract_position in ['rand', 'random']:
+        import random
+        extract_position = lambda n: random.random()
 
     if 'neurons' in kwargs:
         neurons = kwargs['neurons']
@@ -161,6 +164,7 @@ def make_rainbow_json_by_position(annotations,
     filename = expand_filename(filename, datestamp=kwargs.get('datestamp', False))
     write_catmaid_json(skids_to_colors, filename)
 
+
 def expand_filename(filename, project_id=-1, datestamp=False):
     if filename[-5:] == '.json':
         filename = filename[:-5]
@@ -176,10 +180,10 @@ def expand_filename(filename, project_id=-1, datestamp=False):
     filename = filename + '.json'
     return filename
 
+
 # --- Below here are functions that call the above functions to make specific
 # --- jsons that I've needed to make frequently in the Full Adult Nerve Cord
 # --- (FANC) EM dataset.
-
 def makejson_T1mn_bundles(kind=None,
                           soma_side=None,
                           radius_pruned=None,
@@ -426,6 +430,7 @@ def makejson_bCS(kind=None, flipped=None):
         },
         add_kind('bCS_byT1T2T3', kind)
     )
+
 
 def makejson_T1bCS_near_lProLN_MNs(kind=None,
                                    radius_pruned=None,
