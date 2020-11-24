@@ -17,12 +17,6 @@ import subprocess
 import pandas as pd
 import numpy as np
 
-try:
-    from .connections import connect_to_catmaid
-    from .connections import clear_cache
-except:
-    from connections import connect_to_catmaid
-    from connections import clear_cache
 import pymaid
 from pymaid import morpho
 pymaid.set_loggers(40)
@@ -241,7 +235,8 @@ def upload_or_update_neurons(neurons,
     unlinked_connectors_start = find_unlinked_connectors(remote_instance=target_project)
 
     for source_neuron in neurons:
-        clear_cache()
+        source_project.clear_cache()
+        target_project.clear_cache()
 
         # Check if a neuron/skeleton with this neuron's name already exists in the target project
         # If so, replace that neuron/skeleton's data with this neuron's data.
@@ -304,7 +299,7 @@ def upload_or_update_neurons(neurons,
                     'WARNING: The linked neuron\'s name is'
                     f' "{linked_neuron.neuron_name}" but was expected to be'
                     f' "{source_neuron.neuron_name}". Continuing will rename'
-                    ' the linked neuron to the expected name. Proceed? [Y/n]')
+                    ' the linked neuron to the expected name. Proceed? [Y/n] ')
                 if user_input not in ('y', 'Y'):
                     continue
 
@@ -405,7 +400,7 @@ def upload_or_update_neurons(neurons,
         # annotating in catmaid and happens to make an unlinked connector that
         # exists when the following lines are run, this will throw an warning
         # despite there being nothing to worry about. Not much I can do there.
-        clear_cache()
+        target_project.clear_cache()
         unlinked_connectors_end = find_unlinked_connectors(remote_instance=target_project)
         newly_unlinked_connectors = set(unlinked_connectors_end).difference(set(unlinked_connectors_start))
         if len(newly_unlinked_connectors) != 0:
@@ -683,8 +678,7 @@ def get_affinetransformed_neurons_by_skid(skids,
 
 # -------Transform neurons using an elastix parameter file------- #
 def elastictransform_neurons_by_annotations(annotations,
-                                            elastix_parameter_file='V3',
-                                            left_right_flip=False,
+                                            transform=None,
                                             **kwargs):
     """
     See upload_or_update_neurons for all keyword argument options.
@@ -692,7 +686,7 @@ def elastictransform_neurons_by_annotations(annotations,
     skids = get_skids_by_annotation(annotations)
     try:
         user_input = input(f'Elastically transforming {len(skids)} neurons.'
-            ' Continue? [Y/n] ')
+                           ' Continue? [Y/n] ')
     except:
         skids = [skids]
         user_input = input('Elastically transforming 1 neuron. Continue? [Y/n] ')
@@ -708,317 +702,99 @@ def elastictransform_neurons_by_annotations(annotations,
 
 
 def elastictransform_neurons_by_skid(skids,
-                                     elastix_parameter_file='V3',
-                                     left_right_flip=False,
+                                     transform=None,
                                      **kwargs):
     """
     See upload_or_update_neurons for all keyword argument options.
     """
+    left_right_flip = kwargs.get('left_right_flip', False)
     if left_right_flip:
         kwargs['linking_relation'] = 'elastic transformation and flipped of'
     else:
         kwargs['linking_relation'] = 'elastic transformation of'
     include_connectors = kwargs.get('import_connectors', False)
     return upload_or_update_neurons(
-        get_elastictransformed_neurons_by_skid(skids,
-            elastix_parameter_file=elastix_parameter_file,
-            left_right_flip=left_right_flip,
-            include_connectors=include_connectors),
+        get_elastictransformed_neurons_by_skid(
+            skids,
+            transform=transform,
+            include_connectors=include_connectors,
+            **kwargs),
         **kwargs
     )
 
 
-def get_elastictransformed_neurons_by_annotations(annotations,
-                                                  elastix_parameter_file='V3',
-                                                  left_right_flip=False,
-                                                  include_connectors=False):  # TODO Change this later once implemented
-
+def get_elastictransformed_neurons_by_annotations(annotations, **kwargs):
+    """
+    See get_elastictransformed_neuron_by_skids for keyword argument options
+    """
     return get_elastictransformed_neurons_by_skid(
         get_skids_by_annotation(annotations),
-        elastix_parameter_file=elastix_parameter_file,
-        left_right_flip=left_right_flip,
-        include_connectors=include_connectors
+        **kwargs
     )
 
 
 def get_elastictransformed_neurons_by_skid(skids,
-                                           elastix_parameter_file='V3',
-                                           left_right_flip=False,
-                                           include_connectors=False):  # TODO Change this later once implemented
+                                           transform=None,
+                                           include_connectors=True,
+                                           y_coordinate_cutoff=None,
+                                           **kwargs):
     """
     Apply an elastic transformation to a neuron.
-    Currently only supports transforms generated by the program elastix.
-    elastix's function transformix must be installed on the user's shell PATH.
-    This function supports situations where the alignment was performed on a
-    volume that has an offset and/or rescaling relative to the space that the
-    neuron's coordinates are provided in. See code for details.
+    skids: A skeleton ID or list of skeleton IDs to transform.
+    transform: a function that takes in an Nx3 numpy array representing a list
+        of treenodes' coordinates and returns an Nx3 numpy array representing
+        the transformed coordinates. Defaults to using warp_points_FANC_to_template
+        from coordinate_transforms.warp_points_between_FANC_and_template.
+    include_connectors (bool): If True, connectors will be transformed,
+        otherwise will not be transformed (which saves execution time).
+    y_coordinate_cutoff (numerical): If not None, filter out treenodes and
+        connectors with y coordinate < y_coordinate_cutoff before transforming.
+
+    kwargs:
+        left_right_flip (bool): Flips the neuron across the VNC template's
+            midplane. Only relevant for the default transform function.
     """
-    y_coordinate_cutoff = None
-    if elastix_parameter_file == 'V3':
-        # Parameters for the synapsesV3 alignment
-        elastix_parameter_file = os.path.join(
-            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-            'template_registration_pipeline/register_EM_dataset_to_template',
-            'TransformParameters.FixedFANC.txt'
-        )
+
+    left_right_flip = kwargs.get('left_right_flip', False)
+
+    if transform is None:
+        try:
+            from .coordinate_transforms.warp_points_between_FANC_and_template \
+                    import warp_points_FANC_to_template as warp
+        except:
+            from coordinate_transforms.warp_points_between_FANC_and_template \
+                    import warp_points_FANC_to_template as warp
+        transform = lambda x: warp(x, reflect=left_right_flip)
         y_coordinate_cutoff = 322500  # 300000 * 4.3/4. In nm
 
-        #offset_of_downsampled_alignment_volume = [496, 496, 840]  # in nm
-        offset_of_downsampled_alignment_volume = [533.2, 533.2, 945]  # in nm
-        scaling_of_downsampled_alignment_volume = np.array([1.0/430,
-                                                            1.0/430,
-                                                            1.0/450]) # in vox / nm
-        downsampled_alignment_volume_fake_voxel_size = [0.30, 0.30, 0.40] # in microns
-
-        max_z_index_of_downsampled_volume_for_z_flip = 435
-
-        unit_conversion_for_catmaid = 1000  # converts microns to nm
-
-        # The VNC atlas' plane of symmetry is at x=329,
-        # and voxel size is 400nm (in catmaid scaling)
-        plane_of_symmetry_x_coordinate = 329 * 400
-
-    elif elastix_parameter_file == 'V2':
-        # Parameters for the synapsesV2 alignment
-        elastix_parameter_file = os.path.join(
-            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-            'template_registration_pipeline/register_EM_dataset_to_template',
-            'old',
-            'TransformParameters.vnc1synapsesV2_to_JRC2018VNCatlas.txt'
-        )
-
-        y_coordinate_cutoff = 344000  # 320k * 4.3/4. In nm
-
-        offset_of_downsampled_alignment_volume = [0, 344000, 0]  # in nm
-        scaling_of_downsampled_alignment_volume = np.array([1.0/430,
-                                                            1.0/430,
-                                                            1.0/450]) # in vox / nm
-        downsampled_alignment_volume_fake_voxel_size = [0.30, 0.30, 0.32] # in microns
-
-        max_z_index_of_downsampled_volume_for_z_flip = 439
-
-        unit_conversion_for_catmaid = 1000  # converts microns to nm
-
-        # The VNC atlas' plane of symmetry is at x=329,
-        # and voxel size is 400nm (in catmaid scaling)
-        plane_of_symmetry_x_coordinate = 329 * 400
-
-    elif os.path.exists(elastix_parameter_file):
-        print('Assuming no scaling or offsets. Scaling and offsets with custom'
-              ' parameter files not yet implemented.')
-    else:
-        raise ValueError("elastix_parameter_file must be either 'V2', 'V3',"
-                         " or point to a parameter file")
-
-    # Temporary folder to store neuron skeleton files
-    if os.path.exists('/dev/shm'): #Linux
-        temp_folder = '/dev/shm/'
-    else:
-        temp_folder = os.path.expanduser('~/.tmp')
-        if not os.path.exists(temp_folder):
-            os.path.mkdir(temp_folder)
-
-    subfolder = 'skeletons'
-    base_folder = os.path.join(temp_folder, subfolder)
-    if not os.path.exists(base_folder):
-        os.mkdir(base_folder)
-
-    try:
-        iter(skids)
-    except:
-        skids = [skids]
-
-    flip_name_modifier = ''
-    if left_right_flip:
-        flip_name_modifier = ' - flipped'
-    final_swc_filenames = [os.path.join(
-        temp_folder, subfolder,
-        f'pymaid.{skid}_remapped_transformixOutput_'
-        f'inTargetProjectUnits{flip_name_modifier}.swc'
-    ) for skid in skids]
-
-    load_existing = ''
-    if all([os.path.exists(f) for f in final_swc_filenames]):
-        load_existing = input(
-            f'Transformed coordinates already exist in {base_folder} for the'
-            ' requested neurons. These can be loaded [l] to save time, but'
-            ' only do this if the neurons on catmaid have not been modified'
-            ' since the creation of these files. You can play it safe and'
-            ' redo [r] the transformation. [l/r] '
-        )
-        assert load_existing.lower() in ('l', 'r'), 'You must respond with l or r.'
-
     print('Pulling source neuron data from catmaid')
-    clear_cache()
+    source_project.clear_cache()
     neurons = pymaid.get_neuron(skids, remote_instance=source_project)
     if type(neurons) is pymaid.core.CatmaidNeuron:
         neurons = pymaid.core.CatmaidNeuronList(neurons)
+
     if y_coordinate_cutoff is not None:
         for neuron in neurons:
             kept_rows = neuron.nodes.y >= y_coordinate_cutoff
             kept_treenode_ids = neuron.nodes[kept_rows].treenode_id.values
+            # TODO double check whether this removes synapses as well. I think it does
             pymaid.subset_neuron(neuron, kept_treenode_ids, inplace=True)
             if neuron.n_skeletons > 1:
                 print(f'{neuron.neuron_name} is fragmented. Healing before continuing.')
                 pymaid.heal_fragmented_neuron(neuron, inplace=True)
 
-    # pymaid.to_swc and CatmaidNeuron.to_swc both output swc files with the
-    # nodes re-indexed from 1 to len(nodes). These functions are both supposed
-    # to return a dict mapping original treenode id to new node id. Seems like this
-    # dict is made and returned properly for CatmaidNeuron.to_swc but is broken
-    # for pymaid.to_swc
-    treenode2index_maps = {}
     for neuron in neurons:
-        treenode2index_maps[neuron.skeleton_id] = neuron.to_swc(os.path.join(
-            temp_folder, subfolder, f'pymaid.{neuron.skeleton_id}.swc'))
+        neuron.neuron_name += ' - elastic transform'
+        if left_right_flip:
+            neuron.neuron_name += ' - flipped'
+            neuron.annotations.append('left-right flipped')
 
+        if include_connectors:
+            neuron.connectors[['x', 'y', 'z']] = transform(neuron.connectors[['x', 'y', 'z']])
 
-    def build_transformed_neurons_from_file():
-        print('Building final neurons in memory')
-        transformed_neurons = []
-        for neuron in neurons:
-            transformed_neuron = neuron.copy()
-            transformed_neuron.neuron_name += ' - elastic transform'
+        neuron.nodes[['x', 'y', 'z']] = transform(neuron.nodes[['x', 'y', 'z']])
 
-            if left_right_flip:
-                transformed_neuron.neuron_name += flip_name_modifier
-                transformed_neuron.annotations.append('left-right flipped')
-
-            print(f'Building neuron {transformed_neuron.neuron_name}')
-
-            final_swc = np.genfromtxt(os.path.join(
-                temp_folder, subfolder,
-                f'pymaid.{neuron.skeleton_id}_remapped_transformixOutput_'
-                f'inTargetProjectUnits{flip_name_modifier}.swc'
-            ))
-
-            treenode2index_map = treenode2index_maps[neuron.skeleton_id]
-            for row in np.arange(transformed_neuron.nodes.shape[0]):
-                treenode = transformed_neuron.nodes.iloc[row].treenode_id
-                try:
-                    index = treenode2index_map[treenode]
-                except KeyError as e:
-                    print(e)
-                    print(treenode2index_map)
-                    raise
-                #print('Treenode', treenode, 'Index', index)
-                assert(final_swc[index-1, 0] == index), ('swc node index is'
-                    'not 1 more than its array index! Something went wrong!')
-                transformed_neuron.nodes.at[row, 'x'] = final_swc[index-1, 2]
-                transformed_neuron.nodes.at[row, 'y'] = final_swc[index-1, 3]
-                transformed_neuron.nodes.at[row, 'z'] = final_swc[index-1, 4]
-            transformed_neurons.append(transformed_neuron)
-
-        if '/.tmp' in base_folder and len(os.listdir(base_folder) > 5000):
-            input('WARNING: There are over 5000 temporary files cluttering up'
-                  f' {base_folder}. Feel free to go delete them all.')
-
-        print('Done building neurons\n')
-        return pymaid.CatmaidNeuronList(transformed_neurons)
-
-    if load_existing.lower() == 'l':
-        return build_transformed_neurons_from_file()
-
-
-    # TODO TODO TODO: IMPLEMENT TRANSFORMIX-ING OF CONNECTOR LOCATIONS
-    # but skip it if include_connectors=False
-
-    # Transform skeleton from CATMAID project space coordinates to downsampled
-    # alignment volume space
-    print('\nDownsampling')
-    for skeleton_id in skids:
-        print(f'Downsample skeleton {skeleton_id}')
-        input_fname = os.path.join(
-            temp_folder, subfolder, f'pymaid.{skeleton_id}.swc')
-        output_fname_remapped = os.path.join(
-            temp_folder, subfolder, f'pymaid.{skeleton_id}_remapped.swc')
-        data = np.genfromtxt(input_fname)
-
-
-        data[:, 2:5] -= offset_of_downsampled_alignment_volume
-        data[:, 2:5] *= scaling_of_downsampled_alignment_volume
-        data[:, 2:5] *= downsampled_alignment_volume_fake_voxel_size
-        # Flip the z index to account for a flip that was performed in Fiji
-        # on the downsampled volume before aligning it to the template.
-        if max_z_index_of_downsampled_volume_for_z_flip not in [0, None]:
-            data[:, 4] = (max_z_index_of_downsampled_volume_for_z_flip
-                         * downsampled_alignment_volume_fake_voxel_size[2]
-                         - data[:, 4])
-        with open(output_fname_remapped, 'w') as f_out:
-            for a, b, c, d, e, f, g in data:
-                f_out.write('%d %d %f %f %f %d %d\n'%(a, b, c, d, e, f, g))
-    print('Done')
-
-    # Convert skeleton to transformix compatible version
-    print('Reformatting for transformix')
-    for skeleton_id in skids:
-        print(f'Reformat skeleton {skeleton_id}')
-        data = np.genfromtxt(os.path.join(
-            temp_folder, subfolder, f'pymaid.{skeleton_id}_remapped.swc'))
-        if len(data[:, 2:5]) == 0:
-            print(f'Skeleton {skeleton_id} is empty')
-            Continue
-        output_fname_remapped = os.path.join(temp_folder, subfolder,
-            f'pymaid.{skeleton_id}_remapped_transformixInput.swc')
-        with open(output_fname_remapped, 'w') as f_out:
-            f_out.write(f'point\n{len(data)}\n')
-            for a, b, c, d, e, f, g in data:
-                f_out.write('%f %f %f\n'%(c, d, e))
-
-    # Apply transformix
-    print('\nRunning transformix')
-    for skeleton_id in skids:
-        print(f'Apply transformix to skeleton {skeleton_id}')
-        call_fmt = 'transformix -out {} -tp {} -def {}'.format(
-            base_folder,
-            elastix_parameter_file,
-            os.path.join(temp_folder, subfolder,
-                         f'pymaid.{skeleton_id}_remapped_transformixInput.swc')
-        )
-            
-        #print(call_fmt)
-        subprocess.run(call_fmt.split(' '))
-        f = open(os.path.join(temp_folder, subfolder, 'outputpoints.txt'), 'r')
-        fout = open(os.path.join(
-            temp_folder, subfolder,
-            f'pymaid.{skeleton_id}_remapped_transformixOutput.swc'), 'w')
-        for data in f.readlines():
-            output = data.split('OutputPoint = [ ')[1].split(' ]')[0]
-            fout.write(output + '\n')
-        f.close()
-        fout.close()
-    print('Done')
-
-    for skeleton_id in skids:
-        print(f'Rescale skeleton {skeleton_id}')
-        data = np.genfromtxt(os.path.join(temp_folder, subfolder,
-            f'pymaid.{skeleton_id}_remapped.swc'))
-
-        data_transformed = np.genfromtxt(os.path.join(
-            temp_folder, subfolder,
-            f'pymaid.{skeleton_id}_remapped_transformixOutput.swc'))
-
-        data[:, 2:5] = data_transformed
-        data[:, 2:5] *= unit_conversion_for_catmaid  # converts microns to nm
-
-        # Because of the z flip that occurs between the EM dataset and the
-        # atlas, also flipping across the x-axis midplane results in a neuron
-        # that is NOT flipped relative to the original. So if the user does NOT
-        # request a flipped neuron, do the flip across the x-axis midplane.
-        # Otherwise don't.
-        if not left_right_flip:
-            data[:, 2] = plane_of_symmetry_x_coordinate * 2 - data[:, 2]
-
-        output_fname = os.path.join(
-            temp_folder, subfolder,
-            f'pymaid.{skeleton_id}_remapped_transformixOutput_'
-            f'inTargetProjectUnits{flip_name_modifier}.swc')
-        with open(output_fname, 'w') as f_out:
-            for a, b, c, d, e, f, g in data:
-                f_out.write('%d %d %f %f %f %d %d\n'%(a, b, c, d, e, f, g))
-    print('Done')
-
-    return build_transformed_neurons_from_file()
+    return neurons
 
 
 
@@ -1410,7 +1186,7 @@ def add_dummy_nodes_by_annotations(annotations, fake=True, remote_instance=None)
 
 def add_dummy_nodes_by_skid(skids, fake=True, remote_instance=None):
     assert remote_instance is not None, 'Must pass a remote_instance. Exiting.'
-    clear_cache()
+    remote_instance.clear_cache()
     neurons = pymaid.get_neuron(skids, remote_instance=remote_instance)
     server_responses = []
     #TODO can I do this in one API call instead of one call per neuron?
@@ -1454,7 +1230,7 @@ def delete_dummy_nodes_by_skid(skids,
                                fake=True,
                                remote_instance=None):
     assert remote_instance is not None, 'Must pass a remote_instance. Exiting.'
-    clear_cache()
+    remote_instance.clear_cache()
     neurons = pymaid.get_neuron(skids, remote_instance=remote_instance)
     neurons_with_dummy_nodes = []
     for neuron in neurons:
