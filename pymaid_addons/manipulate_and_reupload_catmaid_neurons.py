@@ -334,6 +334,10 @@ def upload_or_update_neurons(neurons,
             # This does NOT annotate the source neuron on the server,
             # it only appends to the object in memory
             source_neuron.annotations.append(f'UPDATED FROM LINKED NEURON - {start_time}')
+            # Make sure to preserve all annotations on the target neuron. This will not
+            # be necessary once # https://github.com/catmaid/CATMAID/issues/2042 is resolved
+            source_neuron.annotations.extend([a for a in linked_neuron.annotations
+                                              if a not in source_neuron.annotations])
 
             skid_to_update = linked_neuron.skeleton_id
             nid_to_update = pymaid.get_neuron_id(
@@ -676,12 +680,15 @@ def get_affinetransformed_neurons_by_skid(skids,
     return pymaid.CatmaidNeuronList(transformed_neurons)
 
 
-# -------Transform neurons using an elastix parameter file------- #
+# -------Transform neurons using an arbitrary transform function------- #
 def elastictransform_neurons_by_annotations(annotations,
                                             transform=None,
                                             **kwargs):
     """
-    See upload_or_update_neurons for all keyword argument options.
+    Searches for skeleton_ids using the given annotations, then
+    calls get_elastictransformed_neurons_by_skid and runs
+    upload_or_update_neurons on the returned neurons.
+    See those two functions for arg and kwarg descriptions.
     """
     skids = get_skids_by_annotation(annotations)
     try:
@@ -695,8 +702,7 @@ def elastictransform_neurons_by_annotations(annotations,
 
     return elastictransform_neurons_by_skid(
         skids,
-        elastix_parameter_file=elastix_parameter_file,
-        left_right_flip=left_right_flip,
+        transform=transform,
         **kwargs
     )
 
@@ -705,9 +711,11 @@ def elastictransform_neurons_by_skid(skids,
                                      transform=None,
                                      **kwargs):
     """
-    See upload_or_update_neurons for all keyword argument options.
+    Calls get_elastictransformed_neurons_by_skid and runs
+    upload_or_update_neurons on the returned neurons.
+    See those two functions for argument descriptions.
     """
-    left_right_flip = kwargs.get('left_right_flip', False)
+    left_right_flip = kwargs.pop('left_right_flip', False)
     if left_right_flip:
         kwargs['linking_relation'] = 'elastic transformation and flipped of'
     else:
@@ -717,6 +725,7 @@ def elastictransform_neurons_by_skid(skids,
         get_elastictransformed_neurons_by_skid(
             skids,
             transform=transform,
+            left_right_flip=left_right_flip,
             include_connectors=include_connectors,
             **kwargs),
         **kwargs
@@ -725,7 +734,7 @@ def elastictransform_neurons_by_skid(skids,
 
 def get_elastictransformed_neurons_by_annotations(annotations, **kwargs):
     """
-    See get_elastictransformed_neuron_by_skids for keyword argument options
+    See get_elastictransformed_neuron_by_skids for argument descriptions.
     """
     return get_elastictransformed_neurons_by_skid(
         get_skids_by_annotation(annotations),
@@ -739,7 +748,7 @@ def get_elastictransformed_neurons_by_skid(skids,
                                            y_coordinate_cutoff=None,
                                            **kwargs):
     """
-    Apply an elastic transformation to a neuron.
+    Apply an arbitrary transformation to a neuron.
     skids: A skeleton ID or list of skeleton IDs to transform.
     transform: a function that takes in an Nx3 numpy array representing a list
         of treenodes' coordinates and returns an Nx3 numpy array representing
@@ -774,6 +783,7 @@ def get_elastictransformed_neurons_by_skid(skids,
         neurons = pymaid.core.CatmaidNeuronList(neurons)
 
     if y_coordinate_cutoff is not None:
+        print(f'Applying y coordinate cutoff of {y_coordinate_cutoff}')
         for neuron in neurons:
             kept_rows = neuron.nodes.y >= y_coordinate_cutoff
             kept_treenode_ids = neuron.nodes[kept_rows].treenode_id.values
@@ -784,15 +794,15 @@ def get_elastictransformed_neurons_by_skid(skids,
                 pymaid.heal_fragmented_neuron(neuron, inplace=True)
 
     for neuron in neurons:
+        print(f'Transforming {neuron.neuron_name}')
         neuron.neuron_name += ' - elastic transform'
         if left_right_flip:
             neuron.neuron_name += ' - flipped'
             neuron.annotations.append('left-right flipped')
 
+        neuron.nodes[['x', 'y', 'z']] = transform(neuron.nodes[['x', 'y', 'z']])
         if include_connectors:
             neuron.connectors[['x', 'y', 'z']] = transform(neuron.connectors[['x', 'y', 'z']])
-
-        neuron.nodes[['x', 'y', 'z']] = transform(neuron.nodes[['x', 'y', 'z']])
 
     return neurons
 
