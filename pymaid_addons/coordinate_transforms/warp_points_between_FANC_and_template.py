@@ -6,6 +6,7 @@
 # https://github.com/htem/GridTape_VNC_paper/blob/master/template_registration_pipeline/register_EM_dataset_to_template/warp_points_between_FANC_and_template.py
 
 import os
+import os.path
 import subprocess
 import numpy as np
 
@@ -93,6 +94,17 @@ def transformix(points, transformation_file):
     starting_dir = os.getcwd()
     if '/' in transformation_file:
         os.chdir(os.path.dirname(transformation_file))
+
+    for fn in ['transformix_input.txt', 'outputpoints.txt', 'transformix.log']:
+        if os.path.exists(fn):
+            m = ('Temporary file '+fn+' already exists in '+os.getcwd()+'. '
+                 'Continuing will delete it. Continue? [Y/n] ')
+            if input(m).lower() != 'y':
+                wd = os.getcwd()
+                os.chdir(starting_dir)
+                raise FileExistsError(wd+'/'+fn+' must be removed.')
+            else:
+                os.remove(fn)
 
     try:
         fn = 'transformix_input.txt'
