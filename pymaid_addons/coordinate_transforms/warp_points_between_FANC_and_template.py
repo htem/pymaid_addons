@@ -113,11 +113,10 @@ def transformix(points, transformation_file):
             transformation_file,
             fn
         )
-        subprocess.run(transformix_cmd.split(' '), stdout=subprocess.DEVNULL)
+        m = subprocess.run(transformix_cmd.split(' '), stdout=subprocess.PIPE)
         if not os.path.exists('outputpoints.txt'):
-            # Run again but this time let the error message print
-            subprocess.run(transformix_cmd.split(' '))
-            raise Exception('transformix failed, see output above for details')
+            print(m.stdout.decode())
+            raise Exception('transformix failed, see output above for details.')
 
         new_pts = []
         with open('outputpoints.txt', 'r') as transformix_out:
