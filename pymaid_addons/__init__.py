@@ -16,9 +16,8 @@ def reset_connection(config_filename='default_connection.json'):
     connections.source_project = source_project
     manipulate_and_reupload_catmaid_neurons.source_project = source_project
     make_3dViewer_json.source_project = source_project
-    if target_project is not None:
-        connections.target_project = target_project
-        manipulate_and_reupload_catmaid_neurons.target_project = target_project
+    connections.target_project = target_project
+    manipulate_and_reupload_catmaid_neurons.target_project = target_project
 
 connect_to = reset_connection  # Just an alias
  
