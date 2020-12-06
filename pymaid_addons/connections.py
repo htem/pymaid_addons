@@ -119,35 +119,42 @@ def print_project_name(project, title=None):
     )
 
 
-def get_source_project_id():
-    print_project_name(source_project, 'Source project:')
+def get_source_project_id(verbose=True):
+    if verbose:
+        print_project_name(source_project, 'Source project:')
     return source_project.project_id
 
 
-def set_source_project_id(project_id):
+def set_source_project_id(project_id, verbose=True):
     source_project.project_id = project_id
-    return get_source_project_id()
+    return get_source_project_id(verbose)
 
 
-def get_target_project_id():
-    print_project_name(target_project, 'Target project:')
+def get_target_project_id(verbose=True):
+    if target_project is None:
+        print('Target project not defined.')
+        return None
+    if verbose:
+        print_project_name(target_project, 'Target project:')
     return target_project.project_id
 
 
-def set_target_project_id(project_id):
+def set_target_project_id(project_id, verbose=True):
+    if target_project is None:
+        print('Target project not defined.')
+        return None
     target_project.project_id = project_id
-    return get_target_project_id()
+    return get_target_project_id(verbose)
 
 
-def set_project_ids(source_id, target_id=None):
+def set_project_ids(source_id, target_id=None, verbose=True):
     if target_id is None:
         target_id = source_id
-    set_source_project_id(source_id)
-    set_target_project_id(target_id)
+    return set_source_project_id(source_id, verbose), set_target_project_id(target_id, verbose)
 
 
-def get_project_ids():
-    return get_source_project_id(), get_target_project_id()
+def get_project_ids(verbose=True):
+    return get_source_project_id(verbose), get_target_project_id(verbose)
 
 
 def clear_cache():
