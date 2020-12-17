@@ -134,26 +134,35 @@ def make_rainbow_json_by_position(annotations,
         extract_position = lambda n: n.nodes.z.mean()
     elif extract_position in ['rand', 'random']:
         import random
-        extract_position = lambda n: random.random()
+        extract_position = lambda: random.random()
+
 
     if 'neurons' in kwargs:
         neurons = kwargs['neurons']
+        skids = neurons.skeleton_id
     else:
-        skids = pymaid.get_skids_by_annotation(
-                    annotations,
-                    intersect=True,
-                    remote_instance=source_project
-                )
-        # TODO can I avoid pulling all this neuron data if I only need the root
-        # position? Is there a way to pull less data even if I need the nodes?
-        neurons = pymaid.get_neuron(skids, remote_instance=source_project)
+        try:
+            skids = pymaid.get_skids_by_annotation(
+                        annotations,
+                        intersect=True,
+                        remote_instance=source_project
+                    )
+        except:
+            skids = annotations  # Allows users to pass skids directly
+        if extract_position.__code__.co_argcount > 0: # Neuron data needed
+            # Can I avoid pulling all this neuron data if I only need the root
+            # position? Is there a way to pull less data even if I need the nodes?
+            neurons = pymaid.get_neuron(skids, remote_instance=source_project)
 
-    #extracted_vals= np.array([extract_position(n) for n in neurons])
-    extracted_vals = pd.Series({n.skeleton_id: extract_position(n) for n in neurons})
+    if extract_position.__code__.co_argcount > 0:
+        extracted_vals = pd.Series({n.skeleton_id: extract_position(n) for n in neurons})
+    else:
+        extracted_vals = pd.Series({skid: extract_position() for skid in skids})
     extracted_vals.sort_values(ascending=False, inplace=True)
     if convert_values_to_rank:
         extracted_vals.iloc[:] = np.arange(len(extracted_vals), 0, -1)
     #print(extracted_vals)
+
     max_pos = extracted_vals.iloc[0]
     min_pos = extracted_vals.iloc[-1]
     scaled_extracted_vals = (extracted_vals - min_pos) / (max_pos - min_pos)
