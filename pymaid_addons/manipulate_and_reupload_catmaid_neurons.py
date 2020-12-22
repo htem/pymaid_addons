@@ -23,6 +23,7 @@ pymaid.set_loggers(40)
 # Default logger level is 20, INFO. Changed to 40, ERROR, to suppress cached
 # data notices and annotation-not-found warnings, which are handled explicitly
 # here. See https://docs.python.org/3/library/logging.html#levels
+import navis
 
 
 # ---Constants--- #
@@ -788,10 +789,10 @@ def get_elastictransformed_neurons_by_skid(skids,
             kept_rows = neuron.nodes.y >= y_coordinate_cutoff
             kept_node_ids = neuron.nodes[kept_rows].node_id.values
             # TODO double check whether this removes synapses as well. I think it does
-            pymaid.subset_neuron(neuron, kept_node_ids, inplace=True)
+            navis.subset_neuron(neuron, kept_node_ids, inplace=True)
             if neuron.n_skeletons > 1:
                 print(f'{neuron.neuron_name} is fragmented. Healing before continuing.')
-                pymaid.heal_fragmented_neuron(neuron, inplace=True)
+                navis.heal_fragmented_neuron(neuron, inplace=True)
 
     for neuron in neurons:
         print(f'Transforming {neuron.neuron_name}')
@@ -997,7 +998,7 @@ def get_volume_pruned_neurons_by_skid(skids,
                                  f' {neuron.neuron_name}: {prim_neurite_end}.'
                                  '\nExiting.')
             
-            nodes['is_in_vol'] = pymaid.in_volume(nodes, volume)
+            nodes['is_in_vol'] = navis.in_volume(nodes, volume)
 
             # Walk backwards until at a point inside the volume, or at a branch
             # point
@@ -1124,18 +1125,18 @@ def get_radius_pruned_neurons_by_skid(skids,
                             ' mean to do this since it was already pruned.'
                             ' Abort!')
         if keep_larger_radii:
-            pymaid.subset_neuron(
+            navis.subset_neuron(
                 neuron,
                 neuron.nodes.node_id.values[neuron.nodes.radius >= radius_to_keep],
                 inplace=True)
         else:
-            pymaid.subset_neuron(
+            navis.subset_neuron(
                 neuron,
                 neuron.nodes.node_id.values[neuron.nodes.radius == radius_to_keep],
                 inplace=True)
 
         if neuron.n_skeletons > 1:
-            pymaid.plot2d(neuron)
+            navis.plot2d(neuron)
             raise Exception(f'You cut {neuron.neuron_name} into two fragments.'
                             " That's not supposed to happen.")
 
