@@ -805,7 +805,7 @@ def get_elastictransformed_neurons_by_skid(skids,
             neuron.annotations.append('left-right flipped')
 
         neuron.nodes[['x', 'y', 'z']] = transform(neuron.nodes[['x', 'y', 'z']])
-        if include_connectors:
+        if include_connectors and neuron.n_connectors > 0:
             neuron.connectors[['x', 'y', 'z']] = transform(neuron.connectors[['x', 'y', 'z']])
 
     return neurons

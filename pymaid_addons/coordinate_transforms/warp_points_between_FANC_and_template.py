@@ -18,6 +18,8 @@ def warp_points_FANC_to_template(points,
                                  output_units='nm',
                                  reflect=False):
     points = np.array(points, dtype=np.float64)
+    if len(points) == 0:
+        return points
     if len(points.shape) == 1:
         return warp_points_FANC_to_template(np.expand_dims(points, 0),
                                             input_units, output_units)[0]
