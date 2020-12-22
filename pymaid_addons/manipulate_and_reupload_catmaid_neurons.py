@@ -309,7 +309,7 @@ def upload_or_update_neurons(neurons,
             # skip the upload and tell the user.  
 
             # Check whether any edited nodes will be overwritten
-            linked_node_details = pymaid.get_node_details(linked_neuron.nodes.treenode_id.values,
+            linked_node_details = pymaid.get_node_details(linked_neuron.nodes.node_id.values,
                                                           remote_instance=target_project)
             is_edited = linked_node_details.edition_time != min(linked_node_details.edition_time)
             if is_edited.any():
@@ -786,9 +786,9 @@ def get_elastictransformed_neurons_by_skid(skids,
         print(f'Applying y coordinate cutoff of {y_coordinate_cutoff}')
         for neuron in neurons:
             kept_rows = neuron.nodes.y >= y_coordinate_cutoff
-            kept_treenode_ids = neuron.nodes[kept_rows].treenode_id.values
+            kept_node_ids = neuron.nodes[kept_rows].node_id.values
             # TODO double check whether this removes synapses as well. I think it does
-            pymaid.subset_neuron(neuron, kept_treenode_ids, inplace=True)
+            pymaid.subset_neuron(neuron, kept_node_ids, inplace=True)
             if neuron.n_skeletons > 1:
                 print(f'{neuron.neuron_name} is fragmented. Healing before continuing.')
                 pymaid.heal_fragmented_neuron(neuron, inplace=True)
@@ -979,7 +979,7 @@ def get_volume_pruned_neurons_by_skid(skids,
             soma node, and walk forward (how?) until finding a node within the
             volume or a branch point. Prune proximal to that.
             """
-            nodes = neuron.nodes.set_index('treenode_id')
+            nodes = neuron.nodes.set_index('node_id')
             # Find end of the primary neurite
             nodes['has_fat_child'] = False
             for tid in nodes.index:
@@ -1126,12 +1126,12 @@ def get_radius_pruned_neurons_by_skid(skids,
         if keep_larger_radii:
             pymaid.subset_neuron(
                 neuron,
-                neuron.nodes.treenode_id.values[neuron.nodes.radius >= radius_to_keep],
+                neuron.nodes.node_id.values[neuron.nodes.radius >= radius_to_keep],
                 inplace=True)
         else:
             pymaid.subset_neuron(
                 neuron,
-                neuron.nodes.treenode_id.values[neuron.nodes.radius == radius_to_keep],
+                neuron.nodes.node_id.values[neuron.nodes.radius == radius_to_keep],
                 inplace=True)
 
         if neuron.n_skeletons > 1:
@@ -1207,14 +1207,14 @@ def add_dummy_nodes_by_skid(skids, fake=True, remote_instance=None):
     
         if not fake:
             server_responses.append(
-                pymaid.add_treenode((-1, -1, neuron.nodes.iloc[0].z),
-                                    neuron.nodes.iloc[0].treenode_id,
+                pymaid.add_node((-1, -1, neuron.nodes.iloc[0].z),
+                                    neuron.nodes.iloc[0].node_id,
                                     confidence=1,
                                     remote_instance=remote_instance)
             )
         else:
-            print(f'pymaid.add_treenode((-1, -1, {neuron.nodes.iloc[0].z}),'
-                  f' {neuron.nodes.iloc[0].treenode_id}, confidence=1,'
+            print(f'pymaid.add_node((-1, -1, {neuron.nodes.iloc[0].z}),'
+                  f' {neuron.nodes.iloc[0].node_id}, confidence=1,'
                   ' remote_instance=remote_instance)')
                   
     return server_responses
@@ -1263,7 +1263,7 @@ def delete_dummy_nodes_by_skid(skids,
     # TODO checking for equality between floats is bad.
     # Change it to difference < 0.1 or something
     is_at_dummy_coords = (neurons.nodes[['x', 'y']] == dummy_coords).all(axis=1)
-    nodes_to_delete = neurons.nodes.treenode_id[is_at_dummy_coords].to_list()
+    nodes_to_delete = neurons.nodes.node_id[is_at_dummy_coords].to_list()
 
     if not fake:
         server_responses.append(pymaid.delete_nodes(

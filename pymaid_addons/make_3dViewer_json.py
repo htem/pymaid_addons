@@ -121,11 +121,11 @@ def make_rainbow_json_by_position(annotations,
     colormap = kwargs.get('colormap', turbo_colormap_data)
 
     if extract_position == 'root_x':
-        extract_position = lambda n: n.nodes.x[n.nodes.treenode_id == n.root[0]].values[0]
+        extract_position = lambda n: n.nodes.x[n.nodes.node_id == n.root[0]].values[0]
     elif extract_position in (None, 'root_y'):
-        extract_position = lambda n: n.nodes.y[n.nodes.treenode_id == n.root[0]].values[0]
+        extract_position = lambda n: n.nodes.y[n.nodes.node_id == n.root[0]].values[0]
     elif extract_position == 'root_z':
-        extract_position = lambda n: n.nodes.z[n.nodes.treenode_id == n.root[0]].values[0]
+        extract_position = lambda n: n.nodes.z[n.nodes.node_id == n.root[0]].values[0]
     elif extract_position  == 'mean_x':
         extract_position = lambda n: n.nodes.x.mean()
     elif extract_position  == 'mean_y':
