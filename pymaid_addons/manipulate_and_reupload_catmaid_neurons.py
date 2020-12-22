@@ -784,9 +784,12 @@ def get_elastictransformed_neurons_by_skid(skids,
         neurons = pymaid.core.CatmaidNeuronList(neurons)
 
     if y_coordinate_cutoff is not None:
-        print(f'Applying y coordinate cutoff of {y_coordinate_cutoff}')
         for neuron in neurons:
             kept_rows = neuron.nodes.y >= y_coordinate_cutoff
+            if neuron.n_nodes == kept_rows.sum():  # No nodes to cut off
+                continue
+            print(f'Applying y coordinate cutoff of {y_coordinate_cutoff}'
+                  f' to {neuron.neuron_name}')
             kept_node_ids = neuron.nodes[kept_rows].node_id.values
             # TODO double check whether this removes synapses as well. I think it does
             navis.subset_neuron(neuron, kept_node_ids, inplace=True)
