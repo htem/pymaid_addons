@@ -8,7 +8,7 @@ import pandas as pd
 import pymaid
 
 
-def write_catmaid_json(skids_to_colors, filename):
+def write_catmaid_json(skids_to_colors, filename, default_opacity=1):
     """
     skids_to_colors must be a dict containing keys that are skeleton IDs and
     values that are either hex color strings or 2-tuples containing a hex color
@@ -31,7 +31,7 @@ def write_catmaid_json(skids_to_colors, filename):
                 opacity = skids_to_colors[skid][1]
             else:
                 color = skids_to_colors[skid]
-                opacity = 1
+                opacity = default_opacity
             f.write(f'  \"color\": \"{color}\",\n')
             f.write(f'  \"opacity\": {opacity}\n')
             f.write(' }')
@@ -105,6 +105,7 @@ def make_rainbow_json_by_position(annotations,
                                   filename,
                                   extract_position=None,
                                   convert_values_to_rank=False,
+                                  opacity=1,
                                   **kwargs):
     """
     extract_position can be either a lambda function that defines how to
@@ -171,7 +172,7 @@ def make_rainbow_json_by_position(annotations,
     skids_to_colors = dict(zip(extracted_vals.index, colors))
 
     filename = expand_filename(filename, datestamp=kwargs.get('datestamp', False))
-    write_catmaid_json(skids_to_colors, filename)
+    write_catmaid_json(skids_to_colors, filename, default_opacity=opacity)
 
 
 def expand_filename(filename, project_id=-1, datestamp=False):
