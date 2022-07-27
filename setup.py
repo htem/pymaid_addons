@@ -7,7 +7,7 @@ setuptools.setup(
     name="pymaid-addons",
     version="0.0.1",
     author="Jasper Phelps",
-    author_email="jtmaniatesselvin@g.harvard.edu",
+    author_email="jasper.s.phelps@gmail.com",
     description="Some functions built on top of pymaid",
     long_description=long_description,
     long_description_content_type="text/markdown",
